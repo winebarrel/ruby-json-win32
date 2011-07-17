@@ -1,4 +1,4 @@
-# -*- encoding: utf-8 -*-
+﻿# -*- encoding: utf-8 -*-
 
 Gem::Specification.new do |s|
   s.name = %q{json}
@@ -12,9 +12,9 @@ Gem::Specification.new do |s|
   s.email = %q{flori@ping.de}
   s.executables = [%q{edit_json.rb}, %q{prettify_json.rb}]
   s.extra_rdoc_files = [%q{README.rdoc}]
-  s.files = Dir.glob('lib/**/*')
+  s.files = Dir.glob('bin/**/*')+  Dir.glob('lib/**/*')
   s.homepage = %q{http://flori.github.com/json}
-  s.require_paths = [%q{ext/json/ext}, %q{ext}, %q{lib}]
+  s.require_paths = [%q{lib}]
   s.rubyforge_project = %q{json}
   s.rubygems_version = %q{1.8.5}
   s.summary = %q{JSON Implementation for Ruby}
