@@ -11,7 +11,6 @@ Gem::Specification.new do |s|
   s.description = %q{This is a JSON implementation as a Ruby extension in C.}
   s.email = %q{flori@ping.de}
   s.executables = [%q{edit_json.rb}, %q{prettify_json.rb}]
-  s.extra_rdoc_files = [%q{README.rdoc}]
   s.files = Dir.glob('bin/**/*')+  Dir.glob('lib/**/*')
   s.homepage = %q{http://flori.github.com/json}
   s.require_paths = [%q{lib}]
