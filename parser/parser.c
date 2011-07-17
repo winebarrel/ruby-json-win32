@@ -1929,6 +1929,9 @@ static VALUE cParser_source(VALUE self)
     return rb_str_dup(json->Vsource);
 }
 
+#ifdef _WIN32
+__declspec(dllexport)
+#endif
 void Init_parser()
 {
     rb_require("json/common");

@@ -1319,6 +1319,9 @@ static VALUE cState_depth_set(VALUE self, VALUE depth)
 /*
  *
  */
+#ifdef _WIN32
+__declspec(dllexport)
+#endif
 void Init_generator()
 {
     rb_require("json/common");
