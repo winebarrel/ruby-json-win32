@@ -41,7 +41,6 @@ module JSON
   if defined?(::Encoding)
     def utf8_to_json(string) # :nodoc:
       string = string.dup
-      string << '' # XXX workaround: avoid buffer sharing
       string.force_encoding(::Encoding::ASCII_8BIT)
       string.gsub!(/["\\\x0-\x1f]/) { MAP[$&] }
       string.force_encoding(::Encoding::UTF_8)
@@ -50,9 +49,8 @@ module JSON
 
     def utf8_to_json_ascii(string) # :nodoc:
       string = string.dup
-      string << '' # XXX workaround: avoid buffer sharing
       string.force_encoding(::Encoding::ASCII_8BIT)
-      string.gsub!(/["\\\x0-\x1f]/) { MAP[$&] }
+      string.gsub!(/["\\\x0-\x1f]/n) { MAP[$&] }
       string.gsub!(/(
                       (?:
                         [\xc2-\xdf][\x80-\xbf]    |
@@ -63,16 +61,18 @@ module JSON
                     )/nx) { |c|
                       c.size == 1 and raise GeneratorError, "invalid utf8 byte: '#{c}'"
                       s = JSON.iconv('utf-16be', 'utf-8', c).unpack('H*')[0]
+                      s.force_encoding(::Encoding::ASCII_8BIT)
                       s.gsub!(/.{4}/n, '\\\\u\&')
+                      s.force_encoding(::Encoding::UTF_8)
                     }
       string.force_encoding(::Encoding::UTF_8)
       string
     rescue => e
-      raise GeneratorError, "Caught #{e.class}: #{e}"
+      raise GeneratorError.wrap(e)
     end
   else
     def utf8_to_json(string) # :nodoc:
-      string.gsub(/["\\\x0-\x1f]/) { MAP[$&] }
+      string.gsub(/["\\\x0-\x1f]/n) { MAP[$&] }
     end
 
     def utf8_to_json_ascii(string) # :nodoc:
@@ -91,7 +91,7 @@ module JSON
       }
       string
     rescue => e
-      raise GeneratorError, "Caught #{e.class}: #{e}"
+      raise GeneratorError.wrap(e)
     end
   end
   module_function :utf8_to_json, :utf8_to_json_ascii
@@ -125,7 +125,7 @@ module JSON
         # * *indent*: a string used to indent levels (default: ''),
         # * *space*: a string that is put after, a : or , delimiter (default: ''),
         # * *space_before*: a string that is put before a : pair delimiter (default: ''),
-        # * *object_nl*: a string that is put at the end of a JSON object (default: ''), 
+        # * *object_nl*: a string that is put at the end of a JSON object (default: ''),
         # * *array_nl*: a string that is put at the end of a JSON array (default: ''),
         # * *check_circular*: is deprecated now, use the :max_nesting option instead,
         # * *max_nesting*: sets the maximum level of data structure nesting in
@@ -133,14 +133,18 @@ module JSON
         # * *allow_nan*: true if NaN, Infinity, and -Infinity should be
         #   generated, otherwise an exception is thrown, if these values are
         #   encountered. This options defaults to false.
+        # * *quirks_mode*: Enables quirks_mode for parser, that is for example
+        #   generating single JSON values instead of documents is possible.
         def initialize(opts = {})
-          @indent         = ''
-          @space          = ''
-          @space_before   = ''
-          @object_nl      = ''
-          @array_nl       = ''
-          @allow_nan      = false
-          @ascii_only     = false
+          @indent                = ''
+          @space                 = ''
+          @space_before          = ''
+          @object_nl             = ''
+          @array_nl              = ''
+          @allow_nan             = false
+          @ascii_only            = false
+          @quirks_mode           = false
+          @buffer_initial_length = 1024
           configure opts
         end
 
@@ -165,6 +169,20 @@ module JSON
         # the generated JSON, max_nesting = 0 if no maximum is checked.
         attr_accessor :max_nesting
 
+        # If this attribute is set to true, quirks mode is enabled, otherwise
+        # it's disabled.
+        attr_accessor :quirks_mode
+
+        # :stopdoc:
+        attr_reader :buffer_initial_length
+
+        def buffer_initial_length=(length)
+          if length > 0
+            @buffer_initial_length = length
+          end
+        end
+        # :startdoc:
+
         # This integer returns the current depth data structure nesting in the
         # generated JSON.
         attr_accessor :depth
@@ -188,8 +206,15 @@ module JSON
           @allow_nan
         end
 
+        # Returns true, if only ASCII characters should be generated. Otherwise
+        # returns false.
         def ascii_only?
           @ascii_only
+        end
+
+        # Returns true, if quirks mode is enabled. Otherwise returns false.
+        def quirks_mode?
+          @quirks_mode
         end
 
         # Configure this State instance with the Hash _opts_, and return
@@ -203,6 +228,7 @@ module JSON
           @allow_nan      = !!opts[:allow_nan] if opts.key?(:allow_nan)
           @ascii_only     = opts[:ascii_only] if opts.key?(:ascii_only)
           @depth          = opts[:depth] || 0
+          @quirks_mode    = opts[:quirks_mode] if opts.key?(:quirks_mode)
           if !opts.key?(:max_nesting) # defaults to 19
             @max_nesting = 19
           elsif opts[:max_nesting]
@@ -218,7 +244,7 @@ module JSON
         # passed to the configure method.
         def to_h
           result = {}
-          for iv in %w[indent space space_before object_nl array_nl allow_nan max_nesting ascii_only depth]
+          for iv in %w[indent space space_before object_nl array_nl allow_nan max_nesting ascii_only quirks_mode buffer_initial_length depth]
             result[iv.intern] = instance_variable_get("@#{iv}")
           end
           result
@@ -229,8 +255,12 @@ module JSON
         # GeneratorError exception.
         def generate(obj)
           result = obj.to_json(self)
-          if result !~ /\A\s*(?:\[.*\]|\{.*\})\s*\Z/m
-            raise GeneratorError, "only generation of JSON objects or arrays allowed"
+          unless @quirks_mode
+            unless result =~ /\A\s*\[/ && result =~ /\]\s*\Z/ ||
+              result =~ /\A\s*\{/ && result =~ /\}\s*\Z/
+            then
+              raise GeneratorError, "only generation of JSON objects or arrays allowed"
+            end
           end
           result
         end

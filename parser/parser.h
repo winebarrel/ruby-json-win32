@@ -3,16 +3,10 @@
 
 #include "ruby.h"
 
-#if HAVE_RE_H
+#ifndef HAVE_RUBY_RE_H
 #include "re.h"
 #endif
 
-#ifdef HAVE_RUBY_ENCODING_H
-#include "ruby/encoding.h"
-#define FORCE_UTF8(obj) rb_enc_associate((obj), rb_utf8_encoding())
-#else
-#define FORCE_UTF8(obj)
-#endif
 #ifdef HAVE_RUBY_ST_H
 #include "ruby/st.h"
 #else
@@ -44,13 +38,18 @@ typedef struct JSON_ParserStruct {
     int allow_nan;
     int parsing_name;
     int symbolize_names;
+    int quirks_mode;
     VALUE object_class;
     VALUE array_class;
     int create_additions;
     VALUE match_string;
+    FBuffer *fbuffer;
 } JSON_Parser;
 
 #define GET_PARSER                          \
+    GET_PARSER_INIT;                        \
+    if (!json->Vsource) rb_raise(rb_eTypeError, "uninitialized instance")
+#define GET_PARSER_INIT                     \
     JSON_Parser *json;                      \
     Data_Get_Struct(self, JSON_Parser, json)
 

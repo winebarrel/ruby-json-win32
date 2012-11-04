@@ -7,15 +7,15 @@
 #
 # Built on two universally available structures:
 #   1. A collection of name/value pairs. Often referred to as an _object_, hash table, record, struct, keyed list, or associative array.
-#   2. An orderd list of values. More commonly named as an _array_, vector, sequence, or list.
+#   2. An ordered list of values. More commonly called an _array_, vector, sequence or list.
 #
 # To read more about JSON visit: http://json.org
 #
 # == Parsing JSON
 #
-# To parse a JSON string received by another application, or generated within
+# To parse a JSON string received by another application or generated within
 # your existing application:
-#   
+#
 #   require 'json'
 #
 #   my_hash = JSON.parse('{"hello": "goodbye"}')
@@ -32,7 +32,7 @@
 # just as simple.
 #
 #   require 'json'
-#   
+#
 #   my_hash = {:hello => "goodbye"}
 #   puts JSON.generate(my_hash) => "{\"hello\":\"goodbye\"}"
 #
@@ -41,9 +41,9 @@
 #   require 'json'
 #   puts {:hello => "goodbye"}.to_json => "{\"hello\":\"goodbye\"}"
 #
-# <tt>JSON.generate</tt> only allows objects or arrays to be converted 
-# to JSON syntax. While <tt>to_json</tt> accepts many Ruby classes 
-# even though it only acts a method for serialization:
+# <tt>JSON.generate</tt> only allows objects or arrays to be converted
+# to JSON syntax. <tt>to_json</tt>, however, accepts many Ruby classes
+# even though it acts only as a method for serialization:
 #
 #   require 'json'
 #

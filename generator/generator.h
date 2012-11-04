@@ -4,76 +4,17 @@
 #include <string.h>
 #include <assert.h>
 #include <math.h>
+#include <ctype.h>
 
 #include "ruby.h"
 
-#if HAVE_RUBY_RE_H
+#ifdef HAVE_RUBY_RE_H
 #include "ruby/re.h"
-#endif
-
-#if HAVE_RE_H
+#else
 #include "re.h"
 #endif
 
-#ifdef HAVE_RUBY_ENCODING_H
-#include "ruby/encoding.h"
-#define FORCE_UTF8(obj) rb_enc_associate((obj), rb_utf8_encoding())
-#else
-#define FORCE_UTF8(obj)
-#endif
-
 #define option_given_p(opts, key) RTEST(rb_funcall(opts, i_key_p, 1, key))
-
-#ifndef RHASH_SIZE
-#define RHASH_SIZE(hsh) (RHASH(hsh)->tbl->num_entries)
-#endif
-
-#ifndef RFLOAT_VALUE
-#define RFLOAT_VALUE(val) (RFLOAT(val)->value)
-#endif
-
-#ifndef RARRAY_PTR
-#define RARRAY_PTR(ARRAY) RARRAY(ARRAY)->ptr
-#endif
-#ifndef RARRAY_LEN
-#define RARRAY_LEN(ARRAY) RARRAY(ARRAY)->len
-#endif
-#ifndef RSTRING_PTR
-#define RSTRING_PTR(string) RSTRING(string)->ptr
-#endif
-#ifndef RSTRING_LEN
-#define RSTRING_LEN(string) RSTRING(string)->len
-#endif
-
-#define RSTRING_PAIR(string) RSTRING_PTR(string), RSTRING_LEN(string)
-
-/* fbuffer implementation */
-
-typedef struct FBufferStruct {
-    unsigned long initial_length;
-    char *ptr;
-    unsigned long len;
-    unsigned long capa;
-} FBuffer;
-
-#define FBUFFER_INITIAL_LENGTH 4096
-
-#define FBUFFER_PTR(fb) (fb->ptr)
-#define FBUFFER_LEN(fb) (fb->len)
-#define FBUFFER_CAPA(fb) (fb->capa)
-#define FBUFFER_PAIR(fb) FBUFFER_PTR(fb), FBUFFER_LEN(fb)
-
-static char *fstrndup(const char *ptr, unsigned long len);
-static FBuffer *fbuffer_alloc();
-static FBuffer *fbuffer_alloc_with_length(unsigned long initial_length);
-static void fbuffer_free(FBuffer *fb);
-static void fbuffer_free_only_buffer(FBuffer *fb);
-static void fbuffer_clear(FBuffer *fb);
-static void fbuffer_append(FBuffer *fb, const char *newstr, unsigned long len);
-static void fbuffer_append_long(FBuffer *fb, long number);
-static void fbuffer_append_char(FBuffer *fb, char newchr);
-static FBuffer *fbuffer_dup(FBuffer *fb);
-static VALUE fbuffer_to_s(FBuffer *fb);
 
 /* unicode defintions */
 
@@ -104,6 +45,7 @@ static void unicode_escape(char *buf, UTF16 character);
 static void unicode_escape_to_buffer(FBuffer *buffer, char buf[6], UTF16 character);
 static void convert_UTF8_to_JSON_ASCII(FBuffer *buffer, VALUE string);
 static void convert_UTF8_to_JSON(FBuffer *buffer, VALUE string);
+static char *fstrndup(const char *ptr, unsigned long len);
 
 /* ruby api and some helpers */
 
@@ -124,7 +66,9 @@ typedef struct JSON_Generator_StateStruct {
     long max_nesting;
     char allow_nan;
     char ascii_only;
+    char quirks_mode;
     long depth;
+    long buffer_initial_length;
 } JSON_Generator_State;
 
 #define GET_STATE(self)                       \

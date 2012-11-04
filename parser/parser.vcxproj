@@ -87,7 +87,7 @@
       <AdditionalDependencies>msvcrt-ruby18.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
     <PostBuildEvent>
-      <Command>copy "$(OutDir)$(TargetName)$(TargetExt)" "$(SolutionDir)lib/json/ext/1.8/"</Command>
+      <Command>copy "$(OutDir)$(TargetName)$(TargetExt)" "$(SolutionDir)lib/json/ext/"</Command>
     </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemGroup>
